@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoveIt! — Correos Masivos</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f5;color:#1a1a2e}
+        .top-bar{background:#fff;border-bottom:1px solid #e8ecf1;padding:18px 32px;display:flex;justify-content:space-between;align-items:center}
+        .top-bar h4{font-weight:700;font-size:1.2rem;display:flex;align-items:center;gap:10px}
+        .top-bar .icon-box{width:36px;height:36px;background:linear-gradient(135deg,#2c3e7d,#3bb4e5);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem}
+        .container-main{max-width:860px;margin:28px auto;padding:0 20px}
+        .card{border-radius:16px;border:1px solid #e8ecf1;overflow:hidden;margin-bottom:20px;background:#fff}
+        .card-head{padding:18px 24px;border-bottom:1px solid #e8ecf1;font-weight:600;font-size:0.95rem;display:flex;align-items:center;gap:10px}
+        .card-head.blue{background:linear-gradient(135deg,#1e2a4a,#2c3e7d);color:#fff}
+        .card-head.dark{background:#0f172a;color:#fff}
+        .card-body-c{padding:24px}
+        .form-label{font-size:0.82rem;font-weight:600;color:#344054}
+        .form-control,.form-select{font-family:inherit;border-radius:10px;border:1.5px solid #e2e8f0;font-size:0.9rem}
+        .form-control:focus,.form-select:focus{border-color:#3bb4e5;box-shadow:0 0 0 3px rgba(59,180,229,0.1)}
+        .btn{font-family:inherit;font-weight:600;border-radius:10px}.btn-primary{background:linear-gradient(135deg,#2c3e7d,#3bb4e5);border:none}
+        .table{font-size:0.88rem;margin:0}.table thead th{font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;padding:14px 16px}
+        .table tbody td{padding:14px 16px;vertical-align:middle}.badge{font-weight:500;padding:5px 12px;border-radius:6px;font-size:0.78rem}
+        .alert{border-radius:12px;font-size:0.88rem;font-weight:500}
+    </style>
+</head>
+<body>
+<div id="moveit-loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1e2a4a 0%,#2c3e7d 50%,#3bb4e5 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.5s ease;font-family:'Plus Jakarta Sans',sans-serif">
+    <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:100%;height:100%;border:4px solid rgba(255,255,255,0.15);border-radius:50%"></div>
+        <div style="position:absolute;width:100%;height:100%;border:4px solid transparent;border-top-color:#fff;border-right-color:#fff;border-radius:50%;animation:ml-spin 1s linear infinite"></div>
+        <div style="font-size:3.2rem;animation:ml-bounce 1.2s ease-in-out infinite">🚚</div>
+    </div>
+    <div style="color:#fff;font-size:2.4rem;font-weight:800;margin-top:28px;letter-spacing:-0.5px;text-shadow:0 2px 12px rgba(0,0,0,0.2)">MoveIt!</div>
+    <div style="color:rgba(255,255,255,0.75);font-size:0.95rem;margin-top:6px;font-weight:500">Sistema de Gestión de Domicilios</div>
+    <div style="margin-top:32px;width:240px;height:5px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.7));width:0;animation:ml-progress 3s cubic-bezier(0.4,0,0.2,1) forwards;border-radius:3px;box-shadow:0 0 10px rgba(255,255,255,0.4)"></div>
+    </div>
+    <div id="ml-txt" style="color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:14px;font-weight:500;letter-spacing:0.3px">Cargando...</div>
+</div>
+<style>
+@keyframes ml-spin{to{transform:rotate(360deg)}}
+@keyframes ml-bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.05)}}
+@keyframes ml-progress{0%{width:0}100%{width:100%}}
+body.ml-loading{overflow:hidden}
+</style>
+<script>
+(function(){
+    document.body.classList.add('ml-loading');
+    var msgs=['Inicializando...','Cargando recursos...','Casi listo...'];
+    var txt=document.getElementById('ml-txt'),i=0;
+    var ti=setInterval(function(){i=(i+1)%msgs.length;if(txt)txt.textContent=msgs[i];},900);
+    setTimeout(function(){
+        clearInterval(ti);
+        var l=document.getElementById('moveit-loader');
+        if(l){
+            l.style.opacity='0';
+            setTimeout(function(){
+                if(l.parentNode)l.parentNode.removeChild(l);
+                document.body.classList.remove('ml-loading');
+            },500);
+        }
+    },3000);
+})();
+</script>
+
+    <div class="top-bar">
+        <h4><div class="icon-box"><i class="bi bi-envelope-paper-fill"></i></div> Correos Masivos</h4>
+        <a th:href="@{/admin/dashboard}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver al Panel</a>
+    </div>
+    <div class="container-main">
+        <div th:if="${mensaje}" class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i><span th:text="${mensaje}"></span></div>
+        <div th:if="${error}" class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}"></span></div>
+
+        <div class="card">
+            <div class="card-head blue"><i class="bi bi-send-fill"></i> Redactar Correo Masivo</div>
+            <div class="card-body-c">
+                <form th:action="@{/admin/correos/enviar}" method="post">
+                    <div class="mb-3"><label class="form-label">Destinatarios</label>
+                        <select name="destinatarios" class="form-select" required><option value="clientes">Solo Clientes</option><option value="repartidores">Solo Repartidores</option><option value="todos">Todos los Usuarios</option></select></div>
+                    <div class="mb-3"><label class="form-label">Asunto</label><input type="text" name="asunto" class="form-control" placeholder="Ejemplo: Nueva promoción en MoveIt!" required></div>
+                    <div class="mb-3"><label class="form-label">Mensaje</label><textarea name="mensaje" class="form-control" rows="6" placeholder="Escribe el contenido del correo electrónico..." required></textarea></div>
+                    <button type="submit" class="btn btn-primary" onclick="return confirm('¿Enviar correo a todos los destinatarios?')"><i class="bi bi-send-fill me-1"></i> Enviar Correo Masivo</button>
+                </form>
+            </div>
+        </div>
+
+        <div th:if="${resultados}" class="card">
+            <div class="card-head dark"><i class="bi bi-list-check"></i> Resultado del Envío</div>
+            <div class="table-responsive"><table class="table table-hover"><thead><tr><th>Correo Electrónico</th><th>Estado</th></tr></thead><tbody>
+                <tr th:each="entry : ${resultados}"><td th:text="${entry.key}"></td><td><span class="badge" th:classappend="${entry.value ? 'bg-success' : 'bg-danger'}" th:text="${entry.value ? 'Enviado ✓' : 'Fallido ✗'}"></span></td></tr>
+            </tbody></table></div>
+        </div>
+
+        <div class="card">
+            <div class="card-head"><i class="bi bi-people-fill"></i> Usuarios Registrados</div>
+            <div class="table-responsive"><table class="table table-hover"><thead><tr><th>Usuario</th><th>Correo Electrónico</th><th>Rol</th></tr></thead><tbody>
+                <tr th:each="u : ${usuarios}"><td th:text="${u.usuario}"></td><td th:text="${u.email}"></td>
+                    <td><span class="badge" th:classappend="${u.rol.name()=='administrador'?'bg-danger':(u.rol.name()=='repartidor'?'bg-warning text-dark':'bg-primary')}" th:text="${#strings.capitalize(u.rol.name())}"></span></td></tr>
+            </tbody></table></div>
+        </div>
+    </div>
+</body>
+</html>

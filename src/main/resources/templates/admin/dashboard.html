@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoveIt! — Panel de Administración</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f5;color:#1a1a2e}
+
+        .topbar{background:linear-gradient(135deg,#1e2a4a 0%,#0f172a 100%);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:70px;gap:16px}
+        .tb-brand{display:flex;align-items:center;gap:14px;flex-shrink:0}
+        .tb-brand .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#3bb4e5,#2c7be5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;box-shadow:0 4px 12px rgba(59,180,229,0.3)}
+        .tb-brand h3{font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-0.3px;line-height:1}
+        .tb-brand small{color:rgba(255,255,255,0.4);font-size:0.7rem;font-weight:500}
+        .tb-nav{display:flex;align-items:center;gap:4px;flex:1;justify-content:center;flex-wrap:wrap}
+        .nav-item{display:flex;align-items:center;gap:8px;padding:10px 15px;color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.86rem;font-weight:600;transition:all 0.2s;border-radius:10px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+        .nav-item:hover{color:#fff;background:rgba(255,255,255,0.06)}
+        .nav-item.active{color:#fff;background:rgba(59,180,229,0.14);border-bottom-color:#3bb4e5}
+        .nav-item i{font-size:1rem}
+        .tb-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+        .btn-logout{padding:9px 16px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.12);border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;white-space:nowrap}
+        .btn-logout:hover{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.3)}
+        .tb-burger{display:none;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;padding:4px 8px}
+
+        @media(max-width:1024px){
+            .topbar{flex-wrap:wrap;height:auto;padding:12px 20px}
+            .tb-burger{display:block;order:3}
+            .tb-right{order:2;margin-left:auto}
+            .tb-nav{order:4;flex-basis:100%;flex-direction:column;align-items:stretch;gap:4px;max-height:0;overflow:hidden;transition:max-height 0.3s ease;flex-wrap:nowrap}
+            .tb-nav.open{max-height:420px;padding-bottom:8px}
+            .nav-item{justify-content:flex-start;border-bottom:none;border-left:3px solid transparent}
+            .nav-item.active{border-left-color:#3bb4e5;border-bottom-color:transparent}
+        }
+
+        .main-content{padding:28px 32px;min-height:calc(100vh - 70px);width:100%}
+        .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+        .page-header h2{font-size:1.6rem;font-weight:800;letter-spacing:-0.5px}
+        .page-header .subtitle{color:#64748b;font-size:0.88rem;margin-top:2px}
+        .role-badge{background:#e8f4f8;color:#2c7be5;padding:6px 16px;border-radius:20px;font-size:0.8rem;font-weight:600}
+
+        .stat-card{background:#fff;border-radius:16px;padding:24px;border:1px solid #e8ecf1;transition:all 0.25s}
+        .stat-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.06)}
+        .stat-card .stat-label{font-size:0.78rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px}
+        .stat-card .stat-value{font-size:2.2rem;font-weight:800;color:#1e2a4a;margin-top:4px}
+        .stat-card .stat-icon{font-size:1.8rem;opacity:0.7}
+
+        .content-card{background:#fff;border-radius:16px;border:1px solid #e8ecf1;overflow:hidden}
+        .card-head{padding:18px 24px;border-bottom:1px solid #e8ecf1;display:flex;justify-content:space-between;align-items:center}
+        .card-head h5{font-size:1.05rem;font-weight:700;margin:0}
+        .table{margin:0;font-size:0.88rem}.table thead th{font-size:0.73rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;border-bottom:2px solid #e8ecf1;padding:14px 16px}
+        .table tbody td{padding:14px 16px;vertical-align:middle;color:#344054}.table tbody tr:hover{background:#f8f9fb}
+        .badge{font-weight:500;padding:5px 12px;border-radius:6px;font-size:0.78rem}
+        .section{display:none}.section.active-section{display:block}
+        .filter-bar{padding:14px 24px;background:#f8fafc;border-bottom:1px solid #e8ecf1;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+        .filter-bar .filter-input{flex:1;min-width:240px;padding:9px 14px 9px 36px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:0.88rem;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%2364748b'><path d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/></svg>") no-repeat 12px center;outline:none;transition:all 0.2s}
+        .filter-bar .filter-input:focus{border-color:#3bb4e5;box-shadow:0 0 0 3px rgba(59,180,229,0.1)}
+        .filter-bar .filter-select{padding:9px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:0.88rem;background:#fff;outline:none;min-width:140px;cursor:pointer}
+        .filter-bar .filter-select:focus{border-color:#3bb4e5}
+        .filter-bar .filter-count{font-size:0.8rem;color:#64748b;font-weight:600;margin-left:auto}
+        .no-results-row td{text-align:center;padding:32px !important;color:#94a3b8;font-style:italic}
+        .alert{border-radius:12px;font-size:0.88rem;font-weight:500}
+    </style>
+</head>
+<body>
+<div id="moveit-loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1e2a4a 0%,#2c3e7d 50%,#3bb4e5 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.5s ease;font-family:'Plus Jakarta Sans',sans-serif">
+    <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:100%;height:100%;border:4px solid rgba(255,255,255,0.15);border-radius:50%"></div>
+        <div style="position:absolute;width:100%;height:100%;border:4px solid transparent;border-top-color:#fff;border-right-color:#fff;border-radius:50%;animation:ml-spin 1s linear infinite"></div>
+        <div style="font-size:3.2rem;animation:ml-bounce 1.2s ease-in-out infinite">🚚</div>
+    </div>
+    <div style="color:#fff;font-size:2.4rem;font-weight:800;margin-top:28px;letter-spacing:-0.5px;text-shadow:0 2px 12px rgba(0,0,0,0.2)">MoveIt!</div>
+    <div style="color:rgba(255,255,255,0.75);font-size:0.95rem;margin-top:6px;font-weight:500">Sistema de Gestión de Domicilios</div>
+    <div style="margin-top:32px;width:240px;height:5px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.7));width:0;animation:ml-progress 3s cubic-bezier(0.4,0,0.2,1) forwards;border-radius:3px;box-shadow:0 0 10px rgba(255,255,255,0.4)"></div>
+    </div>
+    <div id="ml-txt" style="color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:14px;font-weight:500;letter-spacing:0.3px">Cargando...</div>
+</div>
+<style>
+@keyframes ml-spin{to{transform:rotate(360deg)}}
+@keyframes ml-bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.05)}}
+@keyframes ml-progress{0%{width:0}100%{width:100%}}
+body.ml-loading{overflow:hidden}
+</style>
+<script>
+(function(){
+    document.body.classList.add('ml-loading');
+    var msgs=['Inicializando...','Cargando recursos...','Casi listo...'];
+    var txt=document.getElementById('ml-txt'),i=0;
+    var ti=setInterval(function(){i=(i+1)%msgs.length;if(txt)txt.textContent=msgs[i];},900);
+    setTimeout(function(){
+        clearInterval(ti);
+        var l=document.getElementById('moveit-loader');
+        if(l){
+            l.style.opacity='0';
+            setTimeout(function(){
+                if(l.parentNode)l.parentNode.removeChild(l);
+                document.body.classList.remove('ml-loading');
+            },500);
+        }
+    },3000);
+})();
+</script>
+
+<header class="topbar">
+    <div class="tb-brand"><div class="logo-icon">🚚</div><div><h3>MoveIt!</h3><small>Panel de Administración</small></div></div>
+    <nav class="tb-nav" id="tbNav">
+        <a class="nav-item active" data-section="dashboard"><i class="bi bi-grid-1x2-fill"></i> Panel Principal</a>
+        <a class="nav-item" data-section="pedidos"><i class="bi bi-box-seam-fill"></i> Todos los Pedidos</a>
+        <a class="nav-item" data-section="usuarios"><i class="bi bi-people-fill"></i> Gestión de Usuarios</a>
+        <a class="nav-item" th:href="@{/admin/geodatos}"><i class="bi bi-geo-alt-fill"></i> Geo Datos</a>
+        <a class="nav-item" th:href="@{/admin/correos}"><i class="bi bi-envelope-paper-fill"></i> Correos Masivos</a>
+        <a class="nav-item" th:href="@{/admin/reportes}"><i class="bi bi-file-earmark-bar-graph-fill"></i> Reportes PDF</a>
+    </nav>
+    <div class="tb-right">
+        <form th:action="@{/logout}" method="post" style="margin:0"><button type="submit" class="btn-logout" onclick="return confirm('¿Estás seguro de cerrar sesión?')"><i class="bi bi-box-arrow-right"></i> Salir</button></form>
+        <button type="button" class="tb-burger" onclick="toggleNav()"><i class="bi bi-list"></i></button>
+    </div>
+</header>
+
+<main class="main-content">
+    <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle-fill me-2"></i><span th:text="${mensaje}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}"></span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+
+    <div class="page-header"><div><h2>Panel de Administración</h2><div class="subtitle">Bienvenido, <span th:text="${nombreAdmin}"></span></div></div><span class="role-badge"><i class="bi bi-shield-check me-1"></i> Administrador</span></div>
+
+    
+    <section id="dashboard" class="section active-section">
+        <div class="row g-3 mb-4">
+            <div class="col-md-3"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="stat-label">Pedidos Activos</div><div class="stat-value" th:text="${pedidosActivos}"></div></div><div class="stat-icon">📦</div></div></div></div>
+            <div class="col-md-3"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="stat-label">Repartidores</div><div class="stat-value" th:text="${totalRepartidores}"></div></div><div class="stat-icon">🚴</div></div></div></div>
+            <div class="col-md-3"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="stat-label">Clientes</div><div class="stat-value" th:text="${totalClientes}"></div></div><div class="stat-icon">👥</div></div></div></div>
+            <div class="col-md-3"><div class="stat-card"><div class="d-flex justify-content-between"><div><div class="stat-label">Total Pedidos</div><div class="stat-value" th:text="${totalPedidos}"></div></div><div class="stat-icon">📋</div></div></div></div>
+        </div>
+        <div class="content-card"><div class="card-head"><h5><i class="bi bi-clock-history me-2"></i>Pedidos Recientes</h5></div>
+            <div class="filter-bar">
+                <input type="text" class="filter-input" data-filter-target="tbody-recientes" placeholder="Buscar en pedidos recientes...">
+                <select class="filter-select" data-filter-target="tbody-recientes" data-filter-col="4">
+                    <option value="">Todos los estados</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="aceptado">Aceptado</option>
+                    <option value="entregado">Entregado</option>
+                    <option value="cancelado">Cancelado</option>
+                </select>
+                <span class="filter-count" id="count-recientes"></span>
+            </div>
+            <div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>Fecha</th><th>Destinatario</th><th>Dirección de Entrega</th><th>Estado</th><th>Repartidor</th></tr></thead><tbody id="tbody-recientes">
+                <tr th:each="p : ${pedidos}" th:if="${pStat.index < 10}">
+                    <td><strong th:text="'#'+${p.id}"></strong></td>
+                    <td th:text="${#temporals.format(p.fecha,'dd/MM/yyyy HH:mm')}"></td>
+                    <td th:text="${p.destinatario}"></td>
+                    <td th:text="${p.entrega}"></td>
+                    <td><span class="badge" th:classappend="${p.estado.name()=='entregado'?'bg-success':(p.estado.name()=='aceptado'?'bg-warning text-dark':(p.estado.name()=='cancelado'?'bg-danger':'bg-secondary'))}" th:text="${#strings.capitalize(p.estado.name())}"></span></td>
+                    <td th:text="${p.repartidorAsignado!=null?p.repartidorAsignado.usuario:'— Sin asignar'}"></td>
+                </tr>
+            </tbody></table></div>
+        </div>
+    </section>
+
+    
+    <section id="pedidos" class="section">
+        <div class="content-card"><div class="card-head"><h5><i class="bi bi-box-seam me-2"></i>Todos los Pedidos</h5><span class="badge bg-primary" th:text="${#lists.size(pedidos)}+' registros'"></span></div>
+            <div class="filter-bar">
+                <input type="text" class="filter-input" data-filter-target="tbody-pedidos" placeholder="Buscar por cliente, destinatario, repartidor...">
+                <select class="filter-select" data-filter-target="tbody-pedidos" data-filter-col="4">
+                    <option value="">Todos los servicios</option>
+                    <option value="express">Express</option>
+                    <option value="standard">Estándar</option>
+                    <option value="economy">Económico</option>
+                </select>
+                <select class="filter-select" data-filter-target="tbody-pedidos" data-filter-col="5">
+                    <option value="">Todos los estados</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="aceptado">Aceptado</option>
+                    <option value="entregado">Entregado</option>
+                    <option value="cancelado">Cancelado</option>
+                </select>
+                <span class="filter-count" id="count-pedidos"></span>
+            </div>
+            <div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>Fecha</th><th>Cliente</th><th>Destinatario</th><th>Servicio</th><th>Estado</th><th>Repartidor</th></tr></thead><tbody id="tbody-pedidos">
+                <tr th:each="p : ${pedidos}">
+                    <td><strong th:text="'#'+${p.id}"></strong></td>
+                    <td th:text="${#temporals.format(p.fecha,'dd/MM/yyyy HH:mm')}"></td>
+                    <td th:text="${p.cliente.usuario}"></td>
+                    <td th:text="${p.destinatario}"></td>
+                    <td><span class="badge" th:classappend="${p.servicio.name()=='express'?'bg-danger':(p.servicio.name()=='standard'?'bg-primary':'bg-secondary')}" th:text="${#strings.capitalize(p.servicio.name())}"></span></td>
+                    <td><span class="badge" th:classappend="${p.estado.name()=='entregado'?'bg-success':(p.estado.name()=='aceptado'?'bg-warning text-dark':'bg-secondary')}" th:text="${#strings.capitalize(p.estado.name())}"></span></td>
+                    <td th:text="${p.repartidorAsignado!=null?p.repartidorAsignado.usuario:'— Sin asignar'}"></td>
+                </tr>
+            </tbody></table></div>
+        </div>
+    </section>
+
+    
+    <section id="usuarios" class="section">
+        <div class="content-card mb-3"><div class="card-head"><h5><i class="bi bi-people-fill me-2"></i>Gestión de Usuarios</h5><button class="btn btn-sm btn-success" onclick="document.getElementById('form-add').classList.toggle('d-none')"><i class="bi bi-plus-lg me-1"></i>Nuevo Usuario</button></div>
+            <div id="form-add" class="d-none p-3 border-bottom" style="background:#f8fafc">
+                <form th:action="@{/admin/usuario/crear}" method="post" class="row g-2 align-items-end">
+                    <div class="col-md-2"><label class="form-label small fw-semibold">Nombre</label><input name="usuario" class="form-control form-control-sm" placeholder="Usuario" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_]+" title="Solo letras, números y guion bajo"></div>
+                    <div class="col-md-3"><label class="form-label small fw-semibold">Correo Electrónico</label><input name="email" type="email" class="form-control form-control-sm" placeholder="correo@ejemplo.com" required></div>
+                    <div class="col-md-2"><label class="form-label small fw-semibold">Teléfono</label><input name="telefono" class="form-control form-control-sm phone-input" placeholder="3001234567" pattern="3[0-9]{9}" maxlength="10" title="10 dígitos, inicia con 3"></div>
+                    <div class="col-md-2"><label class="form-label small fw-semibold">Contraseña</label><input name="password" type="password" class="form-control form-control-sm" placeholder="Mín. 8 caracteres" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}" title="Mín. 8 caracteres, 1 mayúscula, 1 minúscula y 1 número"></div>
+                    <div class="col-md-2"><label class="form-label small fw-semibold">Rol</label><select name="rol" class="form-select form-select-sm"><option value="cliente">Cliente</option><option value="repartidor">Repartidor</option><option value="administrador">Administrador</option></select></div>
+                    <div class="col-md-1"><button class="btn btn-primary btn-sm w-100">Crear</button></div>
+                </form>
+            </div>
+            <div class="filter-bar">
+                <input type="text" class="filter-input" data-filter-target="tbody-usuarios" placeholder="Buscar por nombre, correo o teléfono...">
+                <select class="filter-select" data-filter-target="tbody-usuarios" data-filter-col="4">
+                    <option value="">Todos los roles</option>
+                    <option value="administrador">Administrador</option>
+                    <option value="repartidor">Repartidor</option>
+                    <option value="cliente">Cliente</option>
+                </select>
+                <span class="filter-count" id="count-usuarios"></span>
+            </div>
+            <div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>Nombre</th><th>Correo Electrónico</th><th>Teléfono</th><th>Rol</th><th style="width:280px">Acciones</th></tr></thead><tbody id="tbody-usuarios">
+                <tr th:each="u : ${usuarios}">
+                    <td><strong th:text="'#'+${u.id}"></strong></td>
+                    <td th:text="${u.usuario}"></td>
+                    <td th:text="${u.email}"></td>
+                    <td th:text="${u.telefono}"></td>
+                    <td><span class="badge" th:classappend="${u.rol.name()=='administrador'?'bg-danger':(u.rol.name()=='repartidor'?'bg-warning text-dark':'bg-primary')}" th:text="${#strings.capitalize(u.rol.name())}"></span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1 btn-edit" th:data-id="${u.id}" th:data-usuario="${u.usuario}" th:data-email="${u.email}" th:data-telefono="${u.telefono}" th:data-rol="${u.rol.name()}"><i class="bi bi-pencil-square me-1"></i>Editar</button>
+                        <button class="btn btn-sm btn-outline-warning me-1 btn-pw" th:data-id="${u.id}" th:data-usuario="${u.usuario}"><i class="bi bi-key me-1"></i>Clave</button>
+                        <form th:action="@{/admin/usuario/eliminar}" method="post" style="display:inline" onsubmit="return confirm('¿Eliminar este usuario?')"><input type="hidden" name="id" th:value="${u.id}"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3"></i></button></form>
+                    </td>
+                </tr>
+            </tbody></table></div>
+        </div>
+
+        </div></div></div>
+    </section>
+
+    
+    <div class="modal fade" id="modalEditar" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="border-radius:16px;overflow:hidden">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e2a4a,#2c3e7d);color:#fff;border:none;padding:18px 24px">
+            <h5 class="modal-title" style="font-weight:700"><i class="bi bi-pencil-square me-2"></i>Editar Usuario</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form th:action="@{/admin/usuario/editar}" method="post">
+            <div class="modal-body" style="padding:24px">
+                <input type="hidden" name="id" id="edit-id">
+                <div class="mb-3"><label class="form-label fw-semibold">Nombre de Usuario</label><input name="usuario" id="edit-usuario" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label fw-semibold">Correo Electrónico</label><input name="email" id="edit-email" type="email" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label fw-semibold">Teléfono</label><input name="telefono" id="edit-telefono" class="form-control phone-input" pattern="3[0-9]{9}" maxlength="10" title="Celular colombiano: 10 dígitos iniciando con 3"></div>
+                <div class="mb-3"><label class="form-label fw-semibold">Rol</label>
+                    <select name="rol" id="edit-rol" class="form-select">
+                        <option value="cliente">Cliente</option>
+                        <option value="repartidor">Repartidor</option>
+                        <option value="administrador">Administrador</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer" style="border:none;padding:16px 24px"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar Cambios</button></div>
+        </form>
+    </div></div></div>
+
+    
+    <div class="modal fade" id="modalPassword" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content" style="border-radius:16px;overflow:hidden">
+        <div class="modal-header" style="background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;border:none;padding:18px 24px">
+            <h5 class="modal-title" style="font-weight:700"><i class="bi bi-key me-2"></i>Cambiar Contraseña</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form th:action="@{/admin/usuario/resetPassword}" method="post">
+            <div class="modal-body" style="padding:24px">
+                <input type="hidden" name="id" id="pw-id">
+                <p style="font-size:0.88rem;color:#64748b;margin-bottom:16px">Nueva contraseña para: <strong id="pw-nombre"></strong></p>
+                <div class="mb-3"><label class="form-label fw-semibold">Nueva Contraseña</label><input name="newPassword" type="text" class="form-control" placeholder="Mínimo 8 caracteres" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}" title="Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número"><small class="d-block mt-2 text-muted" style="font-size:0.75rem">Debe incluir mayúsculas, minúsculas y números</small></div>
+            </div>
+            <div class="modal-footer" style="border:none;padding:16px 24px"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-warning">Cambiar Contraseña</button></div>
+        </form>
+    </div></div></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function activateAdminSection(s){
+    if(!s) return;
+    const item = document.querySelector('.nav-item[data-section="'+s+'"]');
+    if(!item) return;
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.section').forEach(x=>x.classList.remove('active-section'));
+    const t=document.getElementById(s);
+    if(t) t.classList.add('active-section');
+}
+
+document.querySelectorAll('.nav-item[data-section]').forEach(item=>{
+    item.addEventListener('click',e=>{
+        const s=item.getAttribute('data-section');
+        if(!s)return;
+        e.preventDefault();
+        history.replaceState(null,'','#'+s);
+        activateAdminSection(s);
+        var nav=document.getElementById('tbNav');
+        if(nav) nav.classList.remove('open');
+        window.scrollTo({top:0,behavior:'smooth'});
+    });
+});
+
+function toggleNav(){
+    var nav=document.getElementById('tbNav');
+    if(nav) nav.classList.toggle('open');
+}
+
+(function restoreAdminTab(){
+    const hash = window.location.hash.replace('#','');
+    if(hash && document.getElementById(hash)){
+        activateAdminSection(hash);
+    }
+})();
+
+document.querySelectorAll('.phone-input').forEach(input => {
+    input.addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+    });
+});
+
+function applyTableFilter(tbodyId){
+    const tbody = document.getElementById(tbodyId);
+    if(!tbody) return;
+    const controls = document.querySelectorAll('[data-filter-target="'+tbodyId+'"]');
+    let textQuery = '';
+    const colFilters = {};
+    controls.forEach(ctrl => {
+        const val = ctrl.value.trim().toLowerCase();
+        if(ctrl.classList.contains('filter-input')){
+            textQuery = val;
+        } else if(ctrl.classList.contains('filter-select') && val){
+            colFilters[parseInt(ctrl.dataset.filterCol)] = val;
+        }
+    });
+    const rows = tbody.querySelectorAll('tr:not(.no-results-row)');
+    let visibleCount = 0;
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const rowText = row.textContent.toLowerCase();
+        let matchText = !textQuery || rowText.includes(textQuery);
+        let matchCols = true;
+        for(const [col, val] of Object.entries(colFilters)){
+            const cell = cells[col];
+            if(!cell || !cell.textContent.toLowerCase().includes(val)){
+                matchCols = false;
+                break;
+            }
+        }
+        const show = matchText && matchCols;
+        row.style.display = show ? '' : 'none';
+        if(show) visibleCount++;
+    });
+    const countEl = document.getElementById('count-' + tbodyId.replace('tbody-',''));
+    if(countEl){
+        const total = rows.length;
+        countEl.textContent = visibleCount + ' de ' + total + ' registros';
+    }
+    let noResults = tbody.querySelector('.no-results-row');
+    if(visibleCount === 0 && rows.length > 0){
+        if(!noResults){
+            noResults = document.createElement('tr');
+            noResults.className = 'no-results-row';
+            const colCount = tbody.closest('table').querySelectorAll('thead th').length;
+            noResults.innerHTML = '<td colspan="'+colCount+'"><i class="bi bi-search me-2"></i>No se encontraron resultados con los filtros aplicados</td>';
+            tbody.appendChild(noResults);
+        }
+        noResults.style.display = '';
+    } else if(noResults){
+        noResults.style.display = 'none';
+    }
+}
+
+document.querySelectorAll('[data-filter-target]').forEach(ctrl => {
+    const event = ctrl.tagName === 'SELECT' ? 'change' : 'input';
+    ctrl.addEventListener(event, () => applyTableFilter(ctrl.dataset.filterTarget));
+});
+
+['tbody-recientes','tbody-pedidos','tbody-usuarios'].forEach(applyTableFilter);
+
+document.querySelectorAll('.btn-edit').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        document.getElementById('edit-id').value = btn.dataset.id;
+        document.getElementById('edit-usuario').value = btn.dataset.usuario;
+        document.getElementById('edit-email').value = btn.dataset.email;
+        document.getElementById('edit-telefono').value = btn.dataset.telefono || '';
+        document.getElementById('edit-rol').value = btn.dataset.rol;
+        new bootstrap.Modal(document.getElementById('modalEditar')).show();
+    });
+});
+
+document.querySelectorAll('.btn-pw').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        document.getElementById('pw-id').value = btn.dataset.id;
+        document.getElementById('pw-nombre').textContent = btn.dataset.usuario;
+        new bootstrap.Modal(document.getElementById('modalPassword')).show();
+    });
+});
+</script>
+</body>
+</html>

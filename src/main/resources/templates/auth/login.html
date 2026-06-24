@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoveIt! — Iniciar Sesión</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;display:flex}
+        .img-panel{flex:1;background:linear-gradient(135deg,#1e2a4a 0%,#2c3e7d 40%,#3bb4e5 100%);position:relative;display:flex;align-items:flex-end;padding:48px;overflow:hidden}
+        .img-panel::before{content:'';position:absolute;inset:0;background:url('https://images.pexels.com/photos/6169668/pexels-photo-6169668.jpeg?auto=compress&cs=tinysrgb&w=1200') center/cover;opacity:0.3}
+        .img-panel::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(30,42,74,0.4) 0%,rgba(30,42,74,0.9) 100%)}
+        .img-panel .overlay-text{position:relative;z-index:1;color:#fff;max-width:440px}
+        .img-panel .overlay-text h1{font-size:2.2rem;font-weight:800;margin-bottom:12px;line-height:1.15}
+        .img-panel .overlay-text p{font-size:1rem;opacity:0.8;line-height:1.6}
+        .img-panel .overlay-text .testimonial{margin-top:24px;padding:16px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1)}
+        .img-panel .overlay-text .testimonial .stars{color:#fbbf24;font-size:0.9rem;margin-bottom:6px}
+        .img-panel .overlay-text .testimonial small{opacity:0.7}
+
+        .form-panel{width:480px;display:flex;flex-direction:column;justify-content:center;padding:60px;background:#fff}
+        .brand{display:flex;align-items:center;gap:10px;margin-bottom:40px}
+        .brand .icon{width:40px;height:40px;background:linear-gradient(135deg,#2c3e7d,#3bb4e5);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+        .brand span{font-size:1.3rem;font-weight:800;color:#1e2a4a}
+        h2{font-size:1.6rem;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+        .subtitle{color:#64748b;font-size:0.9rem;margin-bottom:32px}
+        .field{margin-bottom:20px}
+        .field label{display:block;font-size:0.82rem;font-weight:600;color:#344054;margin-bottom:7px}
+        .field input{width:100%;padding:13px 16px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:0.92rem;transition:all 0.2s;outline:none;background:#f8fafc}
+        .field input:focus{border-color:#3bb4e5;background:#fff;box-shadow:0 0 0 3px rgba(59,180,229,0.1)}
+        .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,#1e2a4a,#2c3e7d);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.25s;display:flex;align-items:center;justify-content:center;gap:8px}
+        .btn-submit:hover{background:linear-gradient(135deg,#2c3e7d,#3bb4e5);transform:translateY(-1px);box-shadow:0 8px 24px rgba(44,62,125,0.25)}
+        .alert-box{padding:12px 16px;border-radius:10px;font-size:0.85rem;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+        .alert-err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+        .alert-ok{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0}
+        .footer-link{margin-top:28px;text-align:center;font-size:0.88rem;color:#64748b}
+        .footer-link a{color:#2c3e7d;font-weight:600;text-decoration:none}
+        .footer-link a:hover{text-decoration:underline}
+    </style>
+</head>
+<body>
+<div id="moveit-loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1e2a4a 0%,#2c3e7d 50%,#3bb4e5 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.5s ease;font-family:'Plus Jakarta Sans',sans-serif">
+    <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:100%;height:100%;border:4px solid rgba(255,255,255,0.15);border-radius:50%"></div>
+        <div style="position:absolute;width:100%;height:100%;border:4px solid transparent;border-top-color:#fff;border-right-color:#fff;border-radius:50%;animation:ml-spin 1s linear infinite"></div>
+        <div style="font-size:3.2rem;animation:ml-bounce 1.2s ease-in-out infinite">🚚</div>
+    </div>
+    <div style="color:#fff;font-size:2.4rem;font-weight:800;margin-top:28px;letter-spacing:-0.5px;text-shadow:0 2px 12px rgba(0,0,0,0.2)">MoveIt!</div>
+    <div style="color:rgba(255,255,255,0.75);font-size:0.95rem;margin-top:6px;font-weight:500">Sistema de Gestión de Domicilios</div>
+    <div style="margin-top:32px;width:240px;height:5px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.7));width:0;animation:ml-progress 3s cubic-bezier(0.4,0,0.2,1) forwards;border-radius:3px;box-shadow:0 0 10px rgba(255,255,255,0.4)"></div>
+    </div>
+    <div id="ml-txt" style="color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:14px;font-weight:500;letter-spacing:0.3px">Cargando...</div>
+</div>
+<style>
+@keyframes ml-spin{to{transform:rotate(360deg)}}
+@keyframes ml-bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.05)}}
+@keyframes ml-progress{0%{width:0}100%{width:100%}}
+body.ml-loading{overflow:hidden}
+</style>
+<script>
+(function(){
+    document.body.classList.add('ml-loading');
+    var msgs=['Inicializando...','Cargando recursos...','Casi listo...'];
+    var txt=document.getElementById('ml-txt'),i=0;
+    var ti=setInterval(function(){i=(i+1)%msgs.length;if(txt)txt.textContent=msgs[i];},900);
+    setTimeout(function(){
+        clearInterval(ti);
+        var l=document.getElementById('moveit-loader');
+        if(l){
+            l.style.opacity='0';
+            setTimeout(function(){
+                if(l.parentNode)l.parentNode.removeChild(l);
+                document.body.classList.remove('ml-loading');
+            },500);
+        }
+    },3000);
+})();
+</script>
+
+    <div class="img-panel">
+        <div class="overlay-text">
+            <h1>Conectamos personas con entregas confiables</h1>
+            <p>Miles de usuarios confían en MoveIt! para enviar sus paquetes de forma segura y rápida.</p>
+            <div class="testimonial">
+                <div class="stars">★★★★★</div>
+                <p style="font-size:0.9rem">"Excelente servicio. Mi paquete llegó en menos de una hora."</p>
+                <small>— Cliente satisfecho, Bogotá</small>
+            </div>
+        </div>
+    </div>
+    <div class="form-panel">
+        <div class="brand"><div class="icon">🚚</div><span>MoveIt!</span></div>
+        <h2>Iniciar Sesión</h2>
+        <p class="subtitle">Ingresa tus credenciales para acceder al sistema</p>
+
+        <div th:if="${error}" class="alert-box alert-err">⚠️ <span th:text="${error}"></span></div>
+        <div th:if="${mensaje}" class="alert-box alert-ok">✓ <span th:text="${mensaje}"></span></div>
+
+        <form th:action="@{/login}" method="post">
+            <div class="field">
+                <label>Nombre de Usuario</label>
+                <input type="text" name="usuario" placeholder="Ingresa tu nombre de usuario" required autofocus>
+            </div>
+            <div class="field">
+                <label>Contraseña</label>
+                <input type="password" name="password" placeholder="Ingresa tu contraseña" required>
+            </div>
+            <button type="submit" class="btn-submit">Iniciar Sesión →</button>
+        </form>
+        <p class="footer-link">¿No tienes cuenta? <a th:href="@{/register}">Crea una aquí</a></p>
+    </div>
+</body>
+</html>

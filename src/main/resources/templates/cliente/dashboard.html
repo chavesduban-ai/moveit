@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+function cambiarTab(id, linkEl){
+    try {
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        if(linkEl) linkEl.classList.add('active');
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        var sec = document.getElementById(id);
+        if(sec) sec.classList.add('active');
+        try { history.replaceState(null, '', '#' + id); } catch(_) {}
+        var nav = document.getElementById('tbNav');
+        if(nav) nav.classList.remove('open');
+        if(id === 'nuevo-pedido' && typeof initMapaNuevoPedido === 'function'){
+            setTimeout(initMapaNuevoPedido, 250);
+        }
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    } catch(err) {
+        console.error('cambiarTab error:', err);
+    }
+    return false;
+}
+function goTab(id){
+    var link = document.querySelector('.nav-link[data-tab="' + id + '"]');
+    cambiarTab(id, link);
+}
+function toggleNav(){
+    var nav = document.getElementById('tbNav');
+    if(nav) nav.classList.toggle('open');
+}
+function toggleCollapse(id){
+    var p = document.getElementById(id);
+    if(p) p.classList.toggle('open');
+}
+function showToast(msg, tipo){
+    var wrap = document.getElementById('toast-wrap');
+    if(!wrap){
+        wrap = document.createElement('div');
+        wrap.id = 'toast-wrap';
+        wrap.className = 'toast-wrap';
+        document.body.appendChild(wrap);
+    }
+    var t = document.createElement('div');
+    var clase = tipo === 'ok' ? 'ok' : (tipo === 'err' ? 'err' : '');
+    var icono = tipo === 'ok' ? '✅' : (tipo === 'err' ? '⚠️' : 'ℹ️');
+    t.className = 'toast ' + clase;
+    t.innerHTML = '<span class="t-icon">' + icono + '</span><span class="t-msg">' + msg + '</span>';
+    wrap.appendChild(t);
+    setTimeout(function(){
+        t.classList.add('fade-out');
+        setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 300);
+    }, 3500);
+}
+function selectService(el,val){
+    document.querySelectorAll('.service-option').forEach(function(o){o.classList.remove('selected');});
+    el.classList.add('selected');
+    var si = document.getElementById('servicio-input');
+    if(si) si.value = val;
+}
+function selectPayment(el,val){
+    document.querySelectorAll('.payment-option').forEach(function(o){o.classList.remove('selected');});
+    el.classList.add('selected');
+    var mp = document.getElementById('metodo-pago-input');
+    if(mp) mp.value = val;
+}
+function validarPedido(){
+    var s = document.getElementById('servicio-input');
+    var m = document.getElementById('metodo-pago-input');
+    if(!s || !s.value){
+        showToast('Selecciona un tipo de servicio antes de continuar', 'err');
+        return false;
+    }
+    if(m && !m.value) m.value = 'efectivo';
+    return true;
+}
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoveIt! — Mi Panel</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+
+        .topbar{background:linear-gradient(135deg,#1e2a4a 0%,#0f172a 100%);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:68px}
+        .tb-brand{display:flex;align-items:center;gap:12px;flex-shrink:0}
+        .tb-brand .icon{width:40px;height:40px;background:linear-gradient(135deg,#3bb4e5,#2c7be5);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 4px 12px rgba(59,180,229,0.25)}
+        .tb-brand h3{font-size:1.2rem;font-weight:800;margin:0;line-height:1}
+        .tb-brand small{color:rgba(255,255,255,0.4);font-size:0.7rem}
+        .tb-nav{display:flex;align-items:center;gap:6px;flex:1;justify-content:center}
+        .nav-link{display:flex;align-items:center;gap:8px;padding:10px 18px;color:rgba(255,255,255,0.6);font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;border-radius:10px;text-decoration:none;border-bottom:3px solid transparent}
+        .nav-link:hover{color:#fff;background:rgba(255,255,255,0.06)}
+        .nav-link.active{color:#fff;background:rgba(59,180,229,0.14);border-bottom-color:#3bb4e5}
+        .nav-link i{font-size:1.05rem}
+        .tb-right{display:flex;align-items:center;gap:16px;flex-shrink:0}
+        .tb-user{display:flex;align-items:center;gap:10px}
+        .tb-user .avatar{width:40px;height:40px;background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+        .tb-user .info{line-height:1.2}
+        .tb-user .name{font-size:0.88rem;font-weight:600}
+        .tb-user .role{font-size:0.7rem;color:rgba(255,255,255,0.45)}
+        .btn-logout{padding:9px 16px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.12);border-radius:10px;font-family:inherit;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;white-space:nowrap}
+        .btn-logout:hover{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.3)}
+        .tb-burger{display:none;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;padding:4px 8px}
+
+        @media(max-width:860px){
+            .topbar{flex-wrap:wrap;height:auto;padding:12px 20px;gap:10px}
+            .tb-burger{display:block;order:3}
+            .tb-right{order:2;margin-left:auto}
+            .tb-user .info{display:none}
+            .tb-nav{order:4;flex-basis:100%;flex-direction:column;align-items:stretch;gap:4px;max-height:0;overflow:hidden;transition:max-height 0.3s ease}
+            .tb-nav.open{max-height:320px;padding-bottom:8px}
+            .nav-link{justify-content:flex-start;border-bottom:none;border-left:3px solid transparent}
+            .nav-link.active{border-left-color:#3bb4e5;border-bottom-color:transparent}
+        }
+
+        .main{flex:1;padding:28px 32px;min-height:calc(100vh - 68px);max-width:1200px;margin:0 auto;width:100%}
+        @media(max-width:860px){.main{padding:20px}}
+
+
+        .page-head{margin-bottom:24px}
+        .page-head h2{font-size:1.5rem;font-weight:800;letter-spacing:-0.5px;color:#1e2a4a}
+        .page-head p{color:#64748b;font-size:0.9rem;margin-top:2px}
+
+        .alert-bar{padding:12px 18px;border-radius:12px;font-size:0.88rem;font-weight:500;margin-bottom:20px;display:flex;align-items:center;gap:8px;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0}
+
+        .section{display:none}
+        .section.active{display:block}
+
+        .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+        .stat-box{background:#fff;border-radius:14px;padding:22px;border:1px solid #e8ecf1;transition:all 0.25s}
+        .stat-box:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.05)}
+        .stat-box .stat-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+        .stat-box .stat-top span{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b}
+        .stat-box .stat-top .emoji{font-size:1.4rem}
+        .stat-box .stat-num{font-size:1.8rem;font-weight:800;color:#1e2a4a}
+
+        .card{background:#fff;border-radius:16px;border:1px solid #e8ecf1;overflow:hidden;margin-bottom:20px}
+        .card-head{padding:18px 22px;border-bottom:1px solid #e8ecf1;display:flex;justify-content:space-between;align-items:center}
+        .card-head h4{font-size:1rem;font-weight:700;margin:0;color:#1e2a4a}
+        .card-body{padding:22px}
+
+        .quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        .quick-btn{padding:18px;border-radius:14px;border:1.5px solid #e8ecf1;background:#fff;cursor:pointer;transition:all 0.25s;text-align:center;font-family:inherit}
+        .quick-btn:hover{border-color:#3bb4e5;transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,180,229,0.1)}
+        .quick-btn .q-icon{font-size:1.8rem;margin-bottom:8px}
+        .quick-btn .q-label{font-size:0.85rem;font-weight:600;color:#1e2a4a}
+        .quick-btn .q-sub{font-size:0.75rem;color:#94a3b8;margin-top:2px}
+
+        .status-card{background:linear-gradient(135deg,#1e2a4a,#2c3e7d);border-radius:16px;padding:24px;color:#fff;margin-bottom:20px;position:relative;overflow:hidden}
+        .status-card::before{content:'';position:absolute;width:200px;height:200px;background:rgba(59,180,229,0.08);border-radius:50%;top:-60px;right:-40px}
+        .status-card .sc-top{display:flex;align-items:center;gap:14px;margin-bottom:16px;position:relative;z-index:1}
+        .status-card .sc-top .sc-icon{width:48px;height:48px;background:rgba(255,255,255,0.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+        .status-card .sc-top h4{font-size:1rem;font-weight:600;margin:0}
+        .status-card .sc-top small{color:rgba(255,255,255,0.5);font-size:0.82rem}
+        .status-card .sc-details{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative;z-index:1}
+        .status-card .sc-detail{background:rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px}
+        .status-card .sc-detail small{color:rgba(255,255,255,0.45);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px}
+        .status-card .sc-detail p{font-size:0.88rem;font-weight:500;margin:2px 0 0}
+        .status-empty{text-align:center;padding:16px;position:relative;z-index:1;opacity:0.7;font-size:0.9rem}
+
+        .hub-welcome{margin-bottom:28px}
+        .hub-welcome h2{font-size:1.9rem;font-weight:800;letter-spacing:-0.5px;color:#1e2a4a}
+        .hub-welcome p{color:#64748b;font-size:0.98rem;margin-top:4px}
+        .hub-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:28px}
+        .hub-action{position:relative;border:none;cursor:pointer;font-family:inherit;text-align:left;padding:30px 28px;border-radius:20px;color:#fff;overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;min-height:170px;display:flex;flex-direction:column;justify-content:space-between}
+        .hub-action::after{content:'';position:absolute;width:160px;height:160px;background:rgba(255,255,255,0.08);border-radius:50%;bottom:-60px;right:-40px;transition:transform 0.3s}
+        .hub-action:hover{transform:translateY(-5px);box-shadow:0 16px 40px rgba(30,42,74,0.22)}
+        .hub-action:hover::after{transform:scale(1.3)}
+        .hub-action .ha-icon{font-size:2.6rem;position:relative;z-index:1}
+        .hub-action .ha-text{position:relative;z-index:1}
+        .hub-action .ha-text strong{display:block;font-size:1.3rem;font-weight:800;letter-spacing:-0.3px}
+        .hub-action .ha-text span{display:block;font-size:0.88rem;opacity:0.85;margin-top:4px}
+        .hub-primary{background:linear-gradient(135deg,#1e2a4a,#3bb4e5)}
+        .hub-secondary{background:linear-gradient(135deg,#2c3e7d,#4f6fc7)}
+        .hub-tertiary{background:linear-gradient(135deg,#0f766e,#14b8a6)}
+        .hub-arrow{position:absolute;top:28px;right:28px;font-size:1.3rem;opacity:0.5;z-index:1;transition:transform 0.2s}
+        .hub-action:hover .hub-arrow{transform:translateX(4px);opacity:0.9}
+
+        .collapse-panel{background:#fff;border:1px solid #e8ecf1;border-radius:16px;overflow:hidden;margin-bottom:20px}
+        .collapse-head{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;transition:background 0.2s}
+        .collapse-head:hover{background:#f8fafc}
+        .collapse-head .ch-left{display:flex;align-items:center;gap:10px;font-size:0.98rem;font-weight:700;color:#1e2a4a}
+        .collapse-head .ch-chevron{font-size:1.2rem;color:#94a3b8;transition:transform 0.3s}
+        .collapse-panel.open .ch-chevron{transform:rotate(180deg)}
+        .collapse-body{max-height:0;overflow:hidden;transition:max-height 0.35s ease}
+        .collapse-panel.open .collapse-body{max-height:600px}
+        .collapse-inner{padding:0 22px 22px}
+
+        .toast-wrap{position:fixed;top:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px}
+        .toast{display:flex;align-items:center;gap:12px;background:#fff;border-left:4px solid #3bb4e5;border-radius:12px;padding:14px 20px;box-shadow:0 10px 30px rgba(0,0,0,0.12);min-width:280px;max-width:380px;animation:toastIn 0.3s ease;font-size:0.9rem;color:#1e2a4a}
+        .toast.ok{border-left-color:#10b981}
+        .toast.err{border-left-color:#ef4444}
+        .toast .t-icon{font-size:1.3rem}
+        .toast .t-msg{flex:1;font-weight:500}
+        .toast.fade-out{animation:toastOut 0.3s ease forwards}
+        @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes toastOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px)}}
+
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .form-group{margin-bottom:16px}
+        .form-group.full{grid-column:1/-1}
+        .form-group label{display:block;font-size:0.8rem;font-weight:600;color:#344054;margin-bottom:6px}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:0.9rem;outline:none;transition:all 0.2s;background:#f8fafc}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#3bb4e5;background:#fff;box-shadow:0 0 0 3px rgba(59,180,229,0.08)}
+        .form-group textarea{resize:vertical}
+
+        .btn-main{padding:12px 24px;border:none;border-radius:10px;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px}
+        .btn-blue{background:linear-gradient(135deg,#2c3e7d,#3bb4e5);color:#fff}
+        .btn-blue:hover{box-shadow:0 6px 20px rgba(44,62,125,0.25);transform:translateY(-1px)}
+        .btn-green{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
+        .btn-green:hover{box-shadow:0 6px 20px rgba(5,150,105,0.25);transform:translateY(-1px)}
+        .btn-full{width:100%;justify-content:center}
+
+        .service-option{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;background:#fff}
+        .service-option:hover{border-color:#3bb4e5;background:#f0f9ff}
+        .service-option.selected{border-color:#3bb4e5;background:#eff6ff;box-shadow:0 0 0 3px rgba(59,180,229,0.1)}
+        .service-option .so-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+        .service-option .so-icon.red{background:#fef2f2}.service-option .so-icon.blue{background:#eff6ff}.service-option .so-icon.green{background:#ecfdf5}
+        .service-option .so-info{flex:1}
+        .service-option .so-info strong{font-size:0.9rem;color:#1e2a4a}
+        .service-option .so-info small{font-size:0.78rem;color:#94a3b8}
+        .service-option .so-price{font-size:1rem;font-weight:700;color:#1e2a4a}
+        .payment-option{display:flex;align-items:center;gap:14px;padding:12px 16px;border:1.5px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all 0.2s;margin-bottom:8px;background:#fff}
+        .payment-option:hover{border-color:#3bb4e5;background:#f0f9ff}
+        .payment-option.selected{border-color:#10b981;background:#ecfdf5;box-shadow:0 0 0 3px rgba(16,185,129,0.1)}
+        .payment-option .so-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+        .payment-option .so-info{flex:1}
+        .payment-option .so-info strong{font-size:0.88rem;color:#1e2a4a}
+        .payment-option .so-info small{font-size:0.76rem;color:#94a3b8}
+
+        .order-item{border:1px solid #e8ecf1;border-radius:14px;padding:18px;margin-bottom:14px;transition:all 0.2s;background:#fff}
+        .order-item:hover{box-shadow:0 4px 16px rgba(0,0,0,0.04)}
+        .order-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+        .order-top .oid{font-weight:700;color:#1e2a4a;font-size:0.95rem}
+        .badge-ok{background:#ecfdf5;color:#059669;padding:4px 12px;border-radius:6px;font-size:0.78rem;font-weight:600}
+        .order-meta{display:flex;gap:20px;flex-wrap:wrap;font-size:0.85rem;color:#64748b}
+        .order-meta strong{color:#344054}
+        .stars-row{margin-top:12px;display:flex;align-items:center;gap:4px}
+        .stars-row span{font-size:1.5rem;cursor:pointer;transition:transform 0.15s;color:#d0d5dd}
+        .stars-row span:hover{transform:scale(1.2)}
+        .stars-row span.filled{color:#f59e0b}
+        .stars-label{font-size:0.78rem;color:#94a3b8;margin-left:8px}
+
+        .empty-state{text-align:center;padding:48px 20px;color:#94a3b8}
+        .empty-state .es-icon{font-size:3rem;margin-bottom:12px;opacity:0.5}
+        .empty-state p{font-size:0.92rem}
+
+        .map-section{margin-top:20px;padding-top:20px;border-top:1px solid #e8ecf1}
+        .map-section label{display:flex;align-items:center;gap:8px;font-size:0.85rem;font-weight:600;color:#344054;margin-bottom:10px}
+        .map-section label i{color:#3bb4e5}
+        .map-container{height:300px;border-radius:12px;border:1.5px solid #e2e8f0;overflow:hidden;background:#f8fafc}
+        .map-container.loading{display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.88rem}
+        .map-info{margin-top:10px;padding:10px 14px;background:#eff6ff;border-radius:10px;font-size:0.82rem;color:#2563eb;display:none}
+        .map-info.show{display:block}
+        .map-info.error{background:#fef2f2;color:#dc2626}
+        .leaflet-container{font-family:'Plus Jakarta Sans',sans-serif !important}
+    </style>
+</head>
+<body>
+<div id="moveit-loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1e2a4a 0%,#2c3e7d 50%,#3bb4e5 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.5s ease;font-family:'Plus Jakarta Sans',sans-serif">
+    <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:100%;height:100%;border:4px solid rgba(255,255,255,0.15);border-radius:50%"></div>
+        <div style="position:absolute;width:100%;height:100%;border:4px solid transparent;border-top-color:#fff;border-right-color:#fff;border-radius:50%;animation:ml-spin 1s linear infinite"></div>
+        <div style="font-size:3.2rem;animation:ml-bounce 1.2s ease-in-out infinite">🚚</div>
+    </div>
+    <div style="color:#fff;font-size:2.4rem;font-weight:800;margin-top:28px;letter-spacing:-0.5px;text-shadow:0 2px 12px rgba(0,0,0,0.2)">MoveIt!</div>
+    <div style="color:rgba(255,255,255,0.75);font-size:0.95rem;margin-top:6px;font-weight:500">Sistema de Gestión de Domicilios</div>
+    <div style="margin-top:32px;width:240px;height:5px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.7));width:0;animation:ml-progress 3s cubic-bezier(0.4,0,0.2,1) forwards;border-radius:3px;box-shadow:0 0 10px rgba(255,255,255,0.4)"></div>
+    </div>
+    <div id="ml-txt" style="color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:14px;font-weight:500;letter-spacing:0.3px">Cargando...</div>
+</div>
+<style>
+@keyframes ml-spin{to{transform:rotate(360deg)}}
+@keyframes ml-bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.05)}}
+@keyframes ml-progress{0%{width:0}100%{width:100%}}
+body.ml-loading{overflow:hidden}
+</style>
+<script>
+(function(){
+    document.body.classList.add('ml-loading');
+    var msgs=['Inicializando...','Cargando recursos...','Casi listo...'];
+    var txt=document.getElementById('ml-txt'),i=0;
+    var ti=setInterval(function(){i=(i+1)%msgs.length;if(txt)txt.textContent=msgs[i];},900);
+    setTimeout(function(){
+        clearInterval(ti);
+        var l=document.getElementById('moveit-loader');
+        if(l){
+            l.style.opacity='0';
+            setTimeout(function(){
+                if(l.parentNode)l.parentNode.removeChild(l);
+                document.body.classList.remove('ml-loading');
+            },500);
+        }
+    },3000);
+})();
+</script>
+
+
+<header class="topbar">
+    <div class="tb-brand">
+        <div class="icon">🚚</div>
+        <div><h3>MoveIt!</h3><small>Mi Panel</small></div>
+    </div>
+    <nav class="tb-nav" id="tbNav">
+        <a class="nav-link active" href="javascript:void(0)" data-tab="inicio" onclick="cambiarTab('inicio',this);return false;"><i class="bi bi-house-fill"></i> Inicio</a>
+        <a class="nav-link" href="javascript:void(0)" data-tab="nuevo-pedido" onclick="cambiarTab('nuevo-pedido',this);return false;"><i class="bi bi-plus-circle-fill"></i> Nuevo Pedido</a>
+        <a class="nav-link" href="javascript:void(0)" data-tab="pedidos" onclick="cambiarTab('pedidos',this);return false;"><i class="bi bi-box-seam-fill"></i> Mis Pedidos</a>
+        <a class="nav-link" href="javascript:void(0)" data-tab="perfil" onclick="cambiarTab('perfil',this);return false;"><i class="bi bi-person-fill"></i> Mi Perfil</a>
+    </nav>
+    <div class="tb-right">
+        <div class="tb-user">
+            <div class="avatar">👤</div>
+            <div class="info"><div class="name" th:text="${usuario.usuario}"></div><div class="role">Cliente</div></div>
+        </div>
+        <form th:action="@{/logout}" method="post" style="margin:0">
+            <button type="submit" class="btn-logout" onclick="return confirm('¿Cerrar sesión?')"><i class="bi bi-box-arrow-left"></i> Salir</button>
+        </form>
+        <button type="button" class="tb-burger" onclick="toggleNav()"><i class="bi bi-list"></i></button>
+    </div>
+</header>
+
+<main class="main">
+
+    <section id="inicio" class="section active">
+        <div class="page-head">
+            <h2>Bienvenido, <span th:text="${usuario.usuario}"></span> 👋</h2>
+            <p>Gestiona tus envíos de forma rápida y sencilla</p>
+        </div>
+
+        <div class="status-card">
+            <div class="sc-top">
+                <div class="sc-icon">🚚</div>
+                <div th:if="${ultimoPedido != null}">
+                    <h4>Pedido #<span th:text="${ultimoPedido.id}"></span> — <span th:text="${#strings.capitalize(ultimoPedido.estado.name())}"></span></h4>
+                    <small>Tu último pedido</small>
+                </div>
+                <div th:unless="${ultimoPedido != null}">
+                    <h4>Sin pedidos activos</h4>
+                    <small>Crea tu primer envío</small>
+                </div>
+            </div>
+            <div th:if="${ultimoPedido != null}" class="sc-details">
+                <div class="sc-detail"><small>Recogida</small><p th:text="${ultimoPedido.recogida}"></p></div>
+                <div class="sc-detail"><small>Entrega</small><p th:text="${ultimoPedido.entrega}"></p></div>
+                <div class="sc-detail"><small>Destinatario</small><p th:text="${ultimoPedido.destinatario}"></p></div>
+                <div class="sc-detail"><small>Peso</small><p th:text="|${ultimoPedido.peso} kg|"></p></div>
+            </div>
+            <div th:unless="${ultimoPedido != null}" class="status-empty">Haz clic en "Nuevo Pedido" para comenzar</div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box"><div class="stat-top"><span>Gasto Total</span><span class="emoji">💰</span></div><div class="stat-num">$<span th:text="${#numbers.formatInteger(stats.gasto, 1, 'POINT')}"></span></div></div>
+            <div class="stat-box"><div class="stat-top"><span>Total Pedidos</span><span class="emoji">📦</span></div><div class="stat-num" th:text="${stats.total}"></div></div>
+            <div class="stat-box"><div class="stat-top"><span>Entregados</span><span class="emoji">✅</span></div><div class="stat-num" th:text="${stats.entregados}"></div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-head"><h4>Acciones Rápidas</h4></div>
+            <div class="card-body">
+                <div class="quick-grid">
+                    <div class="quick-btn" onclick="goTab('nuevo-pedido')"><div class="q-icon">📦</div><div class="q-label">Nuevo Pedido</div><div class="q-sub">Enviar un paquete</div></div>
+                    <div class="quick-btn" onclick="goTab('pedidos')"><div class="q-icon">📋</div><div class="q-label">Mis Pedidos</div><div class="q-sub">Ver historial</div></div>
+                    <div class="quick-btn" onclick="goTab('perfil')"><div class="q-icon">⚙️</div><div class="q-label">Mi Perfil</div><div class="q-sub">Editar datos</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="nuevo-pedido" class="section">
+        <div class="page-head">
+            <h2>Nuevo Pedido</h2>
+            <p>Completa la información para crear tu envío</p>
+        </div>
+        <div class="card">
+            <div class="card-head"><h4><i class="bi bi-geo-alt-fill me-2" style="color:#3bb4e5"></i>Información del Envío</h4></div>
+            <div class="card-body">
+                <form th:action="@{/cliente/pedido/crear}" method="post" onsubmit="return validarPedido()">
+                    <div class="form-grid">
+                        <div class="form-group"><label><i class="bi bi-pin-map me-1"></i> Dirección de Recogida</label><input type="text" id="input-recogida" name="recogida" placeholder="Calle 45 #67-89" required></div>
+                        <div class="form-group"><label><i class="bi bi-geo-alt me-1"></i> Dirección de Entrega</label><input type="text" id="input-entrega" name="entrega" placeholder="Carrera 26 #7-40" required></div>
+                        <div class="form-group"><label><i class="bi bi-person me-1"></i> Nombre del Destinatario</label><input type="text" name="destinatario" placeholder="Nombre completo" required></div>
+                        <div class="form-group"><label><i class="bi bi-telephone me-1"></i> Teléfono</label><input type="tel" name="telefono" placeholder="3001234567" required pattern="3[0-9]{9}" maxlength="10" title="Celular colombiano de 10 dígitos que inicia con 3" class="phone-input"></div>
+                        <div class="form-group"><label><i class="bi bi-box me-1"></i> Descripción del Paquete</label><input type="text" name="descripcion" placeholder="Caja mediana, frágil" required></div>
+                        <div class="form-group"><label><i class="bi bi-speedometer me-1"></i> Peso (kg)</label><input type="number" name="peso" step="0.1" placeholder="0.0" required></div>
+                    </div>
+
+                    <label style="display:block;font-size:0.8rem;font-weight:600;color:#344054;margin-bottom:10px"><i class="bi bi-lightning-charge me-1"></i> Tipo de Servicio</label>
+                    <div class="service-option" onclick="selectService(this,'express')">
+                        <div class="so-icon red">⚡</div>
+                        <div class="so-info"><strong>Express</strong><br><small>Entrega en menos de 2 horas</small></div>
+                        <div class="so-price">$12.000</div>
+                    </div>
+                    <div class="service-option" onclick="selectService(this,'standard')">
+                        <div class="so-icon blue">📦</div>
+                        <div class="so-info"><strong>Estándar</strong><br><small>Entrega el mismo día</small></div>
+                        <div class="so-price">$8.000</div>
+                    </div>
+                    <div class="service-option" onclick="selectService(this,'economy')">
+                        <div class="so-icon green">💰</div>
+                        <div class="so-info"><strong>Económico</strong><br><small>Entrega en 24 horas</small></div>
+                        <div class="so-price">$5.000</div>
+                    </div>
+                    <input type="hidden" name="servicio" id="servicio-input" required>
+
+                    <div class="form-group full" style="margin-top:20px">
+                        <label><i class="bi bi-credit-card-2-front me-1"></i> Método de Pago</label>
+                        <div class="payment-option" onclick="selectPayment(this,'efectivo')">
+                            <div class="so-icon" style="background:#fef3c7">💵</div>
+                            <div class="so-info"><strong>Efectivo contra entrega</strong><br><small>Paga al repartidor al recibir</small></div>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment(this,'tarjeta')">
+                            <div class="so-icon" style="background:#dbeafe">💳</div>
+                            <div class="so-info"><strong>Tarjeta de Crédito/Débito</strong><br><small>Pago inmediato seguro</small></div>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment(this,'nequi')">
+                            <div class="so-icon" style="background:#fce7f3">📱</div>
+                            <div class="so-info"><strong>Nequi</strong><br><small>Paga desde tu celular</small></div>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment(this,'pse')">
+                            <div class="so-icon" style="background:#dcfce7">🏦</div>
+                            <div class="so-info"><strong>PSE</strong><br><small>Transferencia bancaria</small></div>
+                        </div>
+                        <input type="hidden" name="metodoPago" id="metodo-pago-input" value="efectivo" required>
+                    </div>
+
+                    <div class="form-group full" style="margin-top:16px">
+                        <label><i class="bi bi-chat-dots me-1"></i> Observaciones (opcional)</label>
+                        <textarea name="observaciones" rows="3" placeholder="Instrucciones especiales para la entrega..."></textarea>
+                    </div>
+
+                    <div class="map-section">
+                        <label><i class="bi bi-map-fill"></i> Vista Previa de la Ruta</label>
+                        <div id="map-preview" class="map-container loading">Completa las direcciones para ver la ruta en el mapa</div>
+                        <div id="map-info" class="map-info"></div>
+                    </div>
+
+                    <button type="submit" class="btn-main btn-green btn-full" style="margin-top:20px"><i class="bi bi-check-lg"></i> Crear Pedido</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section id="pedidos" class="section">
+        <div class="page-head">
+            <h2>Mis Pedidos</h2>
+            <p>Historial de envíos entregados</p>
+        </div>
+
+        <div th:if="${#lists.isEmpty(entregados)}" class="card">
+            <div class="empty-state"><div class="es-icon">📦</div><p>No tienes pedidos entregados aún</p></div>
+        </div>
+
+        <div th:each="pe : ${entregados}" class="order-item">
+            <div class="order-top">
+                <span class="oid">Pedido #<span th:text="${pe.id}"></span></span>
+                <span class="badge-ok">✓ Entregado</span>
+            </div>
+            <div class="order-meta">
+                <span><strong>Repartidor:</strong> <span th:text="${pe.repartidorAsignado?.usuario ?: 'N/A'}"></span></span>
+                <span><strong>Servicio:</strong> <span th:if="${pe.servicio != null}" th:text="${#strings.capitalize(pe.servicio.name())}"></span><span th:unless="${pe.servicio != null}">N/A</span></span>
+                <span><strong>Fecha:</strong> <span th:if="${pe.fecha != null}" th:text="${#temporals.format(pe.fecha, 'dd/MM/yyyy HH:mm')}"></span><span th:unless="${pe.fecha != null}">Sin fecha</span></span>
+            </div>
+            <div class="stars-row" th:data-pedido="${pe.id}">
+                <input type="hidden" class="pid" th:value="${pe.id}">
+                <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+                <span class="stars-label">Calificar repartidor</span>
+            </div>
+        </div>
+    </section>
+
+    <section id="perfil" class="section">
+        <div class="page-head">
+            <h2>Mi Perfil</h2>
+            <p>Edita tu información personal</p>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box"><div class="stat-top"><span>Gasto Total</span><span class="emoji">💰</span></div><div class="stat-num">$<span th:text="${#numbers.formatInteger(stats.gasto, 1, 'POINT')}"></span></div></div>
+            <div class="stat-box"><div class="stat-top"><span>Pedidos</span><span class="emoji">📦</span></div><div class="stat-num" th:text="${stats.total}"></div></div>
+            <div class="stat-box"><div class="stat-top"><span>Entregados</span><span class="emoji">✅</span></div><div class="stat-num" th:text="${stats.entregados}"></div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-head"><h4><i class="bi bi-person-gear me-2" style="color:#3bb4e5"></i>Información Personal</h4></div>
+            <div class="card-body">
+                <form th:action="@{/cliente/perfil/actualizar}" method="post">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Correo Electrónico</label><input type="email" name="email" th:value="${usuario.email ?: ''}" required></div>
+                        <div class="form-group"><label>Teléfono</label><input type="tel" name="telefono" th:value="${usuario.telefono ?: ''}" pattern="3[0-9]{9}" maxlength="10" title="Celular colombiano de 10 dígitos que inicia con 3" class="phone-input"></div>
+                        <div class="form-group"><label>Ciudad</label><input type="text" name="ciudad" th:value="${usuario.ciudad ?: ''}"></div>
+                        <div class="form-group"><label>Dirección</label><input type="text" name="direccion" th:value="${usuario.direccion ?: ''}"></div>
+                    </div>
+                    <button type="submit" class="btn-main btn-blue btn-full" style="margin-top:8px"><i class="bi bi-check-lg"></i> Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script th:inline="javascript">
+const csrfToken=/*[[${_csrf?.token ?: ''}]]*/ '';
+const csrfHeader=/*[[${_csrf?.headerName ?: 'X-CSRF-TOKEN'}]]*/ 'X-CSRF-TOKEN';
+const mensajeBackend=/*[[${mensaje ?: ''}]]*/ '';
+const errorBackend=/*[[${error ?: ''}]]*/ '';
+
+(function restoreClienteTab(){
+    try {
+        var hash = window.location.hash.replace('#','');
+        if(hash && document.getElementById(hash)){
+            var link = document.querySelector('.nav-link[data-tab="'+hash+'"]');
+            cambiarTab(hash, link);
+        }
+    } catch(e) { console.error(e); }
+})();
+
+(function emitirMensaje(){
+    if(mensajeBackend && mensajeBackend.trim() !== ''){
+        showToast(mensajeBackend, 'ok');
+    }
+    if(errorBackend && errorBackend.trim() !== ''){
+        showToast(errorBackend, 'err');
+    }
+})();
+
+document.addEventListener('DOMContentLoaded', function(){
+    const firstPayment = document.querySelector('.payment-option');
+    if(firstPayment){
+        firstPayment.classList.add('selected');
+        const mp = document.getElementById('metodo-pago-input');
+        if(mp && !mp.value) mp.value = 'efectivo';
+    }
+    const firstService = document.querySelector('.service-option');
+    if(firstService){
+        firstService.classList.add('selected');
+        const si = document.getElementById('servicio-input');
+        if(si && !si.value) si.value = 'express';
+    }
+});
+
+document.querySelectorAll('.phone-input').forEach(input => {
+    input.addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+    });
+});
+
+document.querySelectorAll('.stars-row').forEach(row=>{
+    const stars=row.querySelectorAll('span[data-v]');
+    const pidEl=row.querySelector('.pid');
+    if(!pidEl)return;
+    const pid=pidEl.value;
+    stars.forEach(s=>{
+        s.addEventListener('mouseenter',()=>{
+            const v=parseInt(s.dataset.v);
+            stars.forEach(x=>{x.classList.toggle('filled',parseInt(x.dataset.v)<=v)});
+        });
+        s.addEventListener('click',()=>{
+            const v=parseInt(s.dataset.v);
+            stars.forEach(x=>{x.classList.toggle('filled',parseInt(x.dataset.v)<=v)});
+            const fd=new FormData();
+            fd.append('pedidoId',pid);
+            fd.append('calificacion',v);
+            fetch('/cliente/calificar',{method:'POST',body:fd,headers:{[csrfHeader]:csrfToken}})
+            .then(r=>r.json())
+            .then(d=>{
+                if(d.success){
+                    const lbl=row.querySelector('.stars-label');
+                    if(lbl)lbl.textContent='¡Gracias! ⭐';
+                } else {
+                    alert(d.error||'Error al calificar');
+                }
+            });
+        });
+    });
+    row.addEventListener('mouseleave',()=>{stars.forEach(x=>x.classList.remove('filled'))});
+});
+
+const BOGOTA_CENTER = [4.7110, -74.0721];
+
+const PUNTOS_BOGOTA = [
+    [4.7106, -74.0306], [4.6492, -74.0628], [4.7596, -74.0838],
+    [4.7152, -74.1135], [4.6280, -74.1545], [4.6736, -74.1469],
+    [4.6390, -74.0840], [4.6040, -74.0820], [4.5981, -74.0758],
+    [4.6680, -74.0720], [4.6240, -74.1050], [4.6110, -74.1950]
+];
+
+function puntoAproximado(texto) {
+    let h = 0;
+    for (let i = 0; i < texto.length; i++) h = (h * 31 + texto.charCodeAt(i)) & 0x7fffffff;
+    const base = PUNTOS_BOGOTA[h % PUNTOS_BOGOTA.length];
+    const jitterLat = ((h % 100) - 50) / 10000;
+    const jitterLon = (((h >> 8) % 100) - 50) / 10000;
+    return [base[0] + jitterLat, base[1] + jitterLon];
+}
+
+async function intentarNominatim(consulta) {
+    try {
+        const url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(consulta) + '&format=json&limit=1&countrycodes=co';
+        const res = await fetch(url, { headers: { 'Accept-Language': 'es' }});
+        const data = await res.json();
+        if (data && data.length > 0) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    } catch (e) { console.error('Geocode error:', e); }
+    return null;
+}
+
+async function geocodificar(direccion) {
+    if (!direccion || direccion.trim().length < 4) return null;
+    const limpia = direccion.trim();
+    let coord = await intentarNominatim(limpia + ', Bogotá, Colombia');
+    if (coord) return { coord: coord, exacta: true };
+    const sinLetras = limpia.replace(/([0-9])\s*[a-zA-Z](?=\s|#|$)/g, '$1');
+    if (sinLetras !== limpia) {
+        coord = await intentarNominatim(sinLetras + ', Bogotá, Colombia');
+        if (coord) return { coord: coord, exacta: true };
+    }
+    const soloVia = limpia.split('#')[0].split('-')[0].trim();
+    if (soloVia.length >= 4 && soloVia !== limpia) {
+        coord = await intentarNominatim(soloVia + ', Bogotá, Colombia');
+        if (coord) return { coord: coord, exacta: false };
+    }
+    return { coord: puntoAproximado(limpia), exacta: false };
+}
+
+function crearMarker(coords, tipo, label) {
+    const bg = tipo === 'recogida' ? '#2c3e7d,#3bb4e5' : '#059669,#10b981';
+    const icon = L.divIcon({
+        className: '',
+        html: '<div style="background:linear-gradient(135deg,' + bg + ');border:3px solid #fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:1rem">' + label + '</div>',
+        iconSize: [36, 36], iconAnchor: [18, 18]
+    });
+    return L.marker(coords, { icon });
+}
+
+let mapaNuevoPedido = null, markersNuevoPedido = [], rutaNuevoPedido = null, timeoutGeocode = null;
+
+function initMapaNuevoPedido() {
+    const container = document.getElementById('map-preview');
+    if (!container || mapaNuevoPedido) return;
+    container.classList.remove('loading');
+    container.innerHTML = '';
+    mapaNuevoPedido = L.map('map-preview').setView(BOGOTA_CENTER, 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(mapaNuevoPedido);
+    setTimeout(function(){ if (mapaNuevoPedido) mapaNuevoPedido.invalidateSize(); }, 200);
+}
+
+function distanciaKm(a, b) {
+    const R = 6371;
+    const dLat = (b[0] - a[0]) * Math.PI / 180;
+    const dLon = (b[1] - a[1]) * Math.PI / 180;
+    const x = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(a[0]*Math.PI/180) * Math.cos(b[0]*Math.PI/180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+async function actualizarMapaNuevoPedido() {
+    const recogida = document.getElementById('input-recogida').value;
+    const entrega = document.getElementById('input-entrega').value;
+    const info = document.getElementById('map-info');
+    if (!recogida || !entrega) return;
+    initMapaNuevoPedido();
+    setTimeout(function(){ if (mapaNuevoPedido) mapaNuevoPedido.invalidateSize(); }, 100);
+    info.className = 'map-info show';
+    info.textContent = '🔍 Buscando direcciones en el mapa...';
+    const [resR, resE] = await Promise.all([geocodificar(recogida), geocodificar(entrega)]);
+    markersNuevoPedido.forEach(m => mapaNuevoPedido.removeLayer(m));
+    markersNuevoPedido = [];
+    if (rutaNuevoPedido) mapaNuevoPedido.removeLayer(rutaNuevoPedido);
+    if (resR && resR.coord && resE && resE.coord) {
+        const coordR = resR.coord;
+        const coordE = resE.coord;
+        const mR = crearMarker(coordR, 'recogida', 'A').addTo(mapaNuevoPedido).bindPopup('<strong>Recogida</strong><br>' + recogida);
+        const mE = crearMarker(coordE, 'entrega', 'B').addTo(mapaNuevoPedido).bindPopup('<strong>Entrega</strong><br>' + entrega);
+        markersNuevoPedido = [mR, mE];
+        rutaNuevoPedido = L.polyline([coordR, coordE], { color: '#3bb4e5', weight: 4, dashArray: '8, 8', opacity: 0.8 }).addTo(mapaNuevoPedido);
+        mapaNuevoPedido.fitBounds(L.latLngBounds([coordR, coordE]), { padding: [50, 50] });
+        setTimeout(function(){ if (mapaNuevoPedido) mapaNuevoPedido.invalidateSize(); }, 100);
+        const distKm = distanciaKm(coordR, coordE).toFixed(1);
+        if (resR.exacta && resE.exacta) {
+            info.className = 'map-info show';
+            info.innerHTML = '✓ Ruta encontrada — Distancia aproximada: <strong>' + distKm + ' km</strong>';
+        } else {
+            info.className = 'map-info show';
+            info.innerHTML = '📍 Ruta estimada — Distancia aproximada: <strong>' + distKm + ' km</strong>. Una o más direcciones se ubicaron de forma aproximada.';
+        }
+    } else {
+        info.className = 'map-info show error';
+        info.textContent = '⚠️ No se pudo dibujar la ruta. Intenta con direcciones más específicas.';
+    }
+}
+
+['input-recogida', 'input-entrega'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('blur', () => {
+        clearTimeout(timeoutGeocode);
+        timeoutGeocode = setTimeout(actualizarMapaNuevoPedido, 300);
+    });
+    el.addEventListener('change', () => {
+        clearTimeout(timeoutGeocode);
+        timeoutGeocode = setTimeout(actualizarMapaNuevoPedido, 300);
+    });
+    el.addEventListener('input', () => {
+        clearTimeout(timeoutGeocode);
+        timeoutGeocode = setTimeout(actualizarMapaNuevoPedido, 1200);
+    });
+});
+
+</script>
+</body>
+</html>

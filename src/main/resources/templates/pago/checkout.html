@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>Pasarela de Pago — MoveIt!</title>
+<link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.checkout{width:100%;max-width:920px;display:grid;grid-template-columns:1fr 1fr;gap:0;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.12)}
+.resumen{background:linear-gradient(135deg,#1e2a4a 0%,#0f172a 100%);color:#fff;padding:40px 36px;position:relative;overflow:hidden}
+.resumen::after{content:'';position:absolute;width:240px;height:240px;border-radius:50%;background:rgba(59,180,229,0.08);bottom:-80px;right:-60px}
+.resumen .brand{display:flex;align-items:center;gap:12px;margin-bottom:32px;position:relative;z-index:1}
+.resumen .brand .ico{width:44px;height:44px;background:linear-gradient(135deg,#3bb4e5,#2c7be5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.resumen .brand h3{font-size:1.3rem;font-weight:800}
+.resumen .lock{display:inline-flex;align-items:center;gap:6px;font-size:0.78rem;color:rgba(255,255,255,0.55);margin-bottom:24px;position:relative;z-index:1}
+.resumen h4{font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);margin-bottom:14px;position:relative;z-index:1}
+.res-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.9rem;position:relative;z-index:1}
+.res-row span:first-child{color:rgba(255,255,255,0.6)}
+.res-row span:last-child{font-weight:600}
+.res-total{display:flex;justify-content:space-between;margin-top:20px;padding-top:18px;border-top:2px solid rgba(255,255,255,0.15);position:relative;z-index:1}
+.res-total .lbl{font-size:0.9rem;color:rgba(255,255,255,0.7)}
+.res-total .amt{font-size:1.8rem;font-weight:800;color:#3bb4e5}
+.form-side{padding:40px 36px}
+.form-side h2{font-size:1.4rem;font-weight:800;margin-bottom:6px}
+.form-side .sub{color:#64748b;font-size:0.88rem;margin-bottom:26px}
+.alert{padding:12px 16px;border-radius:10px;margin-bottom:18px;font-size:0.86rem;background:#fee2e2;color:#991b1b;display:flex;align-items:center;gap:8px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:0.82rem;font-weight:600;color:#344054;margin-bottom:6px}
+.field input{width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:0.92rem;outline:none;transition:all 0.2s;background:#f8fafc}
+.field input:focus{border-color:#3bb4e5;background:#fff;box-shadow:0 0 0 3px rgba(59,180,229,0.08)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card-visual{background:linear-gradient(135deg,#3bb4e5,#2c7be5);border-radius:14px;padding:20px;color:#fff;margin-bottom:22px;position:relative;height:120px}
+.card-visual .chip{width:36px;height:26px;background:rgba(255,255,255,0.3);border-radius:6px;margin-bottom:18px}
+.card-visual .num{font-size:1.05rem;letter-spacing:2px;font-weight:600}
+.card-visual .brand-mark{position:absolute;top:18px;right:20px;font-size:1.4rem}
+.btn-pay{width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:1rem;font-weight:700;cursor:pointer;transition:transform 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
+.btn-pay:hover{transform:translateY(-1px)}
+.btn-cancel{display:block;text-align:center;margin-top:14px;color:#64748b;font-size:0.85rem;text-decoration:none}
+.sandbox-note{margin-top:18px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:0.78rem;color:#92400e;line-height:1.4}
+@media(max-width:760px){.checkout{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="checkout">
+    <div class="resumen">
+        <div class="brand"><div class="ico">🚚</div><h3>MoveIt! Pay</h3></div>
+        <div class="lock"><i class="bi bi-shield-lock-fill"></i> Pago seguro cifrado</div>
+        <h4>Resumen del Pedido</h4>
+        <div class="res-row"><span>Pedido</span><span>#<span th:text="${pedido.id}"></span></span></div>
+        <div class="res-row"><span>Servicio</span><span th:text="${#strings.capitalize(pedido.servicio.name())}"></span></div>
+        <div class="res-row"><span>Recogida</span><span th:text="${pedido.recogida}"></span></div>
+        <div class="res-row"><span>Entrega</span><span th:text="${pedido.entrega}"></span></div>
+        <div class="res-row"><span>Referencia</span><span th:text="${referencia}"></span></div>
+        <div class="res-total"><span class="lbl">Total a pagar</span><span class="amt">$<span th:text="${#numbers.formatInteger(monto, 1, 'POINT')}"></span></span></div>
+    </div>
+
+    <div class="form-side">
+        <h2>Datos de Pago</h2>
+        <p class="sub">Ingresa los datos de tu tarjeta</p>
+
+        <div th:if="${error}" class="alert"><i class="bi bi-exclamation-triangle-fill"></i> <span th:text="${error}"></span></div>
+
+        <div class="card-visual">
+            <span class="brand-mark">💳</span>
+            <div class="chip"></div>
+            <div class="num" id="cardPreview">•••• •••• •••• ••••</div>
+        </div>
+
+        <form th:action="@{/cliente/pago/procesar}" method="post" id="payForm">
+            <input type="hidden" name="pedidoId" th:value="${pedido.id}">
+            <div class="field">
+                <label>Nombre del titular</label>
+                <input type="text" name="titular" placeholder="Como aparece en la tarjeta" required>
+            </div>
+            <div class="field">
+                <label>Número de tarjeta</label>
+                <input type="text" name="numeroTarjeta" id="numeroTarjeta" placeholder="4242 4242 4242 4242" maxlength="19" inputmode="numeric" required>
+            </div>
+            <div class="row2">
+                <div class="field">
+                    <label>Vencimiento (MM/AA)</label>
+                    <input type="text" name="vencimiento" id="vencimiento" placeholder="12/28" maxlength="5" required>
+                </div>
+                <div class="field">
+                    <label>CVV</label>
+                    <input type="password" name="cvv" placeholder="•••" maxlength="4" inputmode="numeric" required>
+                </div>
+            </div>
+            <button type="submit" class="btn-pay"><i class="bi bi-lock-fill"></i> Pagar $<span th:text="${#numbers.formatInteger(monto, 1, 'POINT')}"></span></button>
+            <a th:href="@{/cliente/dashboard}" class="btn-cancel">Cancelar y volver</a>
+        </form>
+
+        <div class="sandbox-note">
+            <strong>Modo demostración:</strong> esta es una pasarela simulada para la sustentación. No se procesan pagos reales ni se almacenan datos de tarjeta. Usa cualquier número de 16 dígitos; los que terminan en 0000 simulan un rechazo.
+        </div>
+    </div>
+</div>
+
+<script>
+const num = document.getElementById('numeroTarjeta');
+const preview = document.getElementById('cardPreview');
+num.addEventListener('input', function(){
+    let v = this.value.replace(/\D/g,'').slice(0,16);
+    let groups = v.match(/.{1,4}/g);
+    this.value = groups ? groups.join(' ') : '';
+    let display = (v + '••••••••••••••••').slice(0,16);
+    preview.textContent = (display.match(/.{1,4}/g) || []).join(' ');
+});
+const venc = document.getElementById('vencimiento');
+venc.addEventListener('input', function(){
+    let v = this.value.replace(/\D/g,'').slice(0,4);
+    if(v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2);
+    this.value = v;
+});
+document.querySelectorAll('input[inputmode="numeric"]').forEach(function(i){
+    if(i.name === 'cvv') i.addEventListener('input', function(){ this.value = this.value.replace(/\D/g,'').slice(0,4); });
+});
+</script>
+</body>
+</html>

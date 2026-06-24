@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoveIt! — Reportes Estadísticos</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f0f2f5;color:#1a1a2e}
+        .top-bar{background:#fff;border-bottom:1px solid #e8ecf1;padding:18px 32px;display:flex;justify-content:space-between;align-items:center}
+        .top-bar h4{font-weight:700;font-size:1.2rem;display:flex;align-items:center;gap:10px;margin:0}
+        .top-bar .icon-box{width:36px;height:36px;background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem}
+        .container-main{max-width:1000px;margin:28px auto;padding:0 20px}
+        .page-head{margin-bottom:24px}
+        .page-head h2{font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;color:#1e2a4a}
+        .page-head p{color:#64748b;font-size:0.9rem;margin-top:2px}
+
+        .download-hero{background:linear-gradient(135deg,#1e2a4a 0%,#2c3e7d 50%,#7c3aed 100%);border-radius:18px;padding:36px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden}
+        .download-hero::before{content:'';position:absolute;width:400px;height:400px;background:rgba(255,255,255,0.05);border-radius:50%;top:-150px;right:-100px}
+        .download-hero .dh-content{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+        .download-hero h3{font-size:1.5rem;font-weight:800;margin-bottom:8px}
+        .download-hero p{font-size:0.95rem;opacity:0.8;max-width:500px}
+        .btn-download{background:#fff;color:#1e2a4a;padding:14px 28px;border-radius:12px;font-size:0.95rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:10px;transition:all 0.25s;border:none;cursor:pointer;font-family:inherit}
+        .btn-download:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,0.2)}
+
+        .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+        .stat-box{background:#fff;border-radius:14px;padding:18px;border:1px solid #e8ecf1;transition:all 0.25s}
+        .stat-box:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.05)}
+        .stat-box .st-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+        .stat-box .st-top span{font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:#64748b}
+        .stat-box .st-top .emoji{font-size:1.2rem}
+        .stat-box .st-num{font-size:1.4rem;font-weight:800;color:#1e2a4a}
+
+        .card{background:#fff;border-radius:16px;border:1px solid #e8ecf1;overflow:hidden;margin-bottom:20px}
+        .card-head{padding:18px 24px;border-bottom:1px solid #e8ecf1;display:flex;align-items:center;gap:10px}
+        .card-head h4{font-size:1rem;font-weight:700;margin:0;color:#1e2a4a}
+        .card-body-c{padding:22px 24px}
+
+        .table{font-size:0.88rem;margin:0}
+        .table thead th{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;padding:14px 16px;border-bottom:2px solid #e8ecf1}
+        .table tbody td{padding:14px 16px;vertical-align:middle;color:#344054}
+        .table tbody tr:hover{background:#f8fafc}
+        .badge{font-weight:500;padding:5px 12px;border-radius:6px;font-size:0.78rem}
+
+        .income-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #e8ecf1}
+        .income-row:last-child{border:none}
+        .income-row .ir-left{display:flex;align-items:center;gap:14px}
+        .income-row .ir-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+        .income-row .ir-icon.red{background:#fef2f2;color:#dc2626}
+        .income-row .ir-icon.blue{background:#eff6ff;color:#2563eb}
+        .income-row .ir-icon.green{background:#ecfdf5;color:#059669}
+        .income-row .ir-label{font-weight:600;font-size:0.92rem;color:#1e2a4a}
+        .income-row .ir-sub{font-size:0.78rem;color:#94a3b8;margin-top:2px}
+        .income-row .ir-amount{font-size:1.1rem;font-weight:800;color:#10b981}
+
+        .total-ingresos{background:linear-gradient(135deg,#059669,#10b981);border-radius:14px;padding:20px;color:#fff;margin-top:16px;text-align:center}
+        .total-ingresos .ti-label{font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;opacity:0.85}
+        .total-ingresos .ti-amount{font-size:2rem;font-weight:800;margin-top:4px}
+
+        .empty-state{text-align:center;padding:40px 20px;color:#94a3b8}
+        .empty-state i{font-size:2.5rem;opacity:0.5;display:block;margin-bottom:10px}
+    </style>
+</head>
+<body>
+<div id="moveit-loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1e2a4a 0%,#2c3e7d 50%,#3bb4e5 100%);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.5s ease;font-family:'Plus Jakarta Sans',sans-serif">
+    <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:100%;height:100%;border:4px solid rgba(255,255,255,0.15);border-radius:50%"></div>
+        <div style="position:absolute;width:100%;height:100%;border:4px solid transparent;border-top-color:#fff;border-right-color:#fff;border-radius:50%;animation:ml-spin 1s linear infinite"></div>
+        <div style="font-size:3.2rem;animation:ml-bounce 1.2s ease-in-out infinite">🚚</div>
+    </div>
+    <div style="color:#fff;font-size:2.4rem;font-weight:800;margin-top:28px;letter-spacing:-0.5px;text-shadow:0 2px 12px rgba(0,0,0,0.2)">MoveIt!</div>
+    <div style="color:rgba(255,255,255,0.75);font-size:0.95rem;margin-top:6px;font-weight:500">Sistema de Gestión de Domicilios</div>
+    <div style="margin-top:32px;width:240px;height:5px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden">
+        <div style="height:100%;background:linear-gradient(90deg,#fff,rgba(255,255,255,0.7));width:0;animation:ml-progress 3s cubic-bezier(0.4,0,0.2,1) forwards;border-radius:3px;box-shadow:0 0 10px rgba(255,255,255,0.4)"></div>
+    </div>
+    <div id="ml-txt" style="color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:14px;font-weight:500;letter-spacing:0.3px">Cargando...</div>
+</div>
+<style>
+@keyframes ml-spin{to{transform:rotate(360deg)}}
+@keyframes ml-bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.05)}}
+@keyframes ml-progress{0%{width:0}100%{width:100%}}
+body.ml-loading{overflow:hidden}
+</style>
+<script>
+(function(){
+    document.body.classList.add('ml-loading');
+    var msgs=['Inicializando...','Cargando recursos...','Casi listo...'];
+    var txt=document.getElementById('ml-txt'),i=0;
+    var ti=setInterval(function(){i=(i+1)%msgs.length;if(txt)txt.textContent=msgs[i];},900);
+    setTimeout(function(){
+        clearInterval(ti);
+        var l=document.getElementById('moveit-loader');
+        if(l){
+            l.style.opacity='0';
+            setTimeout(function(){
+                if(l.parentNode)l.parentNode.removeChild(l);
+                document.body.classList.remove('ml-loading');
+            },500);
+        }
+    },3000);
+})();
+</script>
+
+<div class="top-bar">
+    <h4><div class="icon-box"><i class="bi bi-file-earmark-bar-graph-fill"></i></div> Reportes Estadísticos</h4>
+    <a th:href="@{/admin/dashboard}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver al Panel</a>
+</div>
+
+<div class="container-main">
+
+    <div class="page-head">
+        <h2>Reportes del Sistema</h2>
+        <p>Visualiza las estadísticas y descarga el reporte completo en PDF</p>
+    </div>
+
+    <div class="download-hero">
+        <div class="dh-content">
+            <div>
+                <h3><i class="bi bi-file-earmark-pdf-fill me-2"></i>Reporte Estadístico Completo</h3>
+                <p>Descarga un PDF profesional con todas las métricas del sistema: resumen general, pedidos por servicio, distribución por estado, top repartidores, ingresos totales y más.</p>
+            </div>
+            <a th:href="@{/admin/reportes/pdf}" class="btn-download">
+                <i class="bi bi-download"></i> Descargar PDF
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-box"><div class="st-top"><span>Total Pedidos</span><span class="emoji">📦</span></div><div class="st-num" th:text="${totalPedidos}"></div></div>
+        <div class="stat-box"><div class="st-top"><span>Activos</span><span class="emoji">🟡</span></div><div class="st-num" th:text="${pedidosActivos}"></div></div>
+        <div class="stat-box"><div class="st-top"><span>Entregados</span><span class="emoji">✅</span></div><div class="st-num" th:text="${pedidosEntregados}"></div></div>
+        <div class="stat-box"><div class="st-top"><span>Clientes</span><span class="emoji">👥</span></div><div class="st-num" th:text="${totalClientes}"></div></div>
+        <div class="stat-box"><div class="st-top"><span>Repartidores</span><span class="emoji">🚴</span></div><div class="st-num" th:text="${totalRepartidores}"></div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><i class="bi bi-cash-coin" style="color:#10b981"></i><h4>Ingresos por Tipo de Servicio</h4></div>
+        <div class="card-body-c">
+            <div class="income-row">
+                <div class="ir-left">
+                    <div class="ir-icon red">⚡</div>
+                    <div>
+                        <div class="ir-label">Express</div>
+                        <div class="ir-sub"><span th:text="${porServicio['express']}"></span> pedidos — $12.000 c/u</div>
+                    </div>
+                </div>
+                <div class="ir-amount">$<span th:text="${#numbers.formatInteger(ingresosPorServicio['express'], 1, 'POINT')}"></span></div>
+            </div>
+            <div class="income-row">
+                <div class="ir-left">
+                    <div class="ir-icon blue">📦</div>
+                    <div>
+                        <div class="ir-label">Estándar</div>
+                        <div class="ir-sub"><span th:text="${porServicio['standard']}"></span> pedidos — $8.000 c/u</div>
+                    </div>
+                </div>
+                <div class="ir-amount">$<span th:text="${#numbers.formatInteger(ingresosPorServicio['standard'], 1, 'POINT')}"></span></div>
+            </div>
+            <div class="income-row">
+                <div class="ir-left">
+                    <div class="ir-icon green">💰</div>
+                    <div>
+                        <div class="ir-label">Económico</div>
+                        <div class="ir-sub"><span th:text="${porServicio['economy']}"></span> pedidos — $5.000 c/u</div>
+                    </div>
+                </div>
+                <div class="ir-amount">$<span th:text="${#numbers.formatInteger(ingresosPorServicio['economy'], 1, 'POINT')}"></span></div>
+            </div>
+
+            <div class="total-ingresos">
+                <div class="ti-label">Total de Ingresos Generados</div>
+                <div class="ti-amount">$<span th:text="${#numbers.formatInteger(totalIngresos, 1, 'POINT')}"></span> COP</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><i class="bi bi-trophy-fill" style="color:#f59e0b"></i><h4>Top 5 Repartidores por Entregas</h4></div>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th style="width:60px">#</th><th>Repartidor</th><th>Entregas Completadas</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry, iterStat : ${topRepartidores}">
+                        <td>
+                            <span th:if="${iterStat.index == 0}" class="badge" style="background:#fef3c7;color:#d97706;font-size:0.9rem">🥇 1</span>
+                            <span th:if="${iterStat.index == 1}" class="badge" style="background:#f1f5f9;color:#64748b;font-size:0.9rem">🥈 2</span>
+                            <span th:if="${iterStat.index == 2}" class="badge" style="background:#fed7aa;color:#c2410c;font-size:0.9rem">🥉 3</span>
+                            <span th:if="${iterStat.index > 2}" th:text="${iterStat.index + 1}"></span>
+                        </td>
+                        <td><strong th:text="${entry.key}"></strong></td>
+                        <td><span class="badge bg-success" th:text="${entry.value} + ' entregas'"></span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div th:if="${topRepartidores.isEmpty()}" class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>No hay datos de entregas todavía</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
